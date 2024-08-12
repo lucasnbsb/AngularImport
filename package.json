@@ -4,7 +4,7 @@
   "description": "Import into your module or standalone component with one command!",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.92.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -14,8 +14,59 @@
   "contributes": {
     "commands": [
       {
-        "command": "angular-import.helloWorld",
-        "title": "Hello World"
+        "command": "angular-import.goToImportStatement",
+        "title": "Angular: Go to import statement"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Import statement type",
+        "properties": {
+          "angular-import.importStatementType": {
+            "type": "string",
+            "default": "module",
+            "enum": [
+              "module",
+              "component",
+              "auto"
+            ],
+            "description": "Where to look for the import statement"
+          }
+        }
+      },
+      {
+        "title": "Component formats",
+        "properties": {
+          "angular-import.componentFormats": {
+            "type": "array",
+            "default": [
+              "component.ts"
+            ],
+            "description": "Component formats to look for when looking for the imports statement"
+          }
+        }
+      },
+      {
+        "title": "Module formats",
+        "properties": {
+          "angular-import.moduleFormats": {
+            "type": "array",
+            "default": [
+              "module.ts"
+            ],
+            "description": "Module formats to look for when looking for the imports statement"
+          }
+        }
+      },
+      {
+        "title": "Open file side by side",
+        "properties": {
+          "angular-import.openFileSideBySide": {
+            "type": "boolean",
+            "default": false,
+            "description": "Open the file side by side"
+          }
+        }
       }
     ]
   },
