@@ -2,9 +2,9 @@
   "name": "angular-import",
   "displayName": "AngularImport",
   "description": "Import into your module or standalone component with one command!",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.0.0"
   },
   "categories": [
     "Other"
@@ -55,6 +55,27 @@
               "module.ts"
             ],
             "description": "Module formats to look for when looking for the imports statement"
+          }
+        }
+      },
+      {
+        "title": "Cli file type extentions",
+        "properties": {
+          "angular-import.fileTypeExtentions": {
+            "type": "array",
+            "default": [
+              "component",
+              "module",
+              "service",
+              "guard",
+              "pipe",
+              "directive",
+              "resolver",
+              "interceptor",
+              "spec",
+              "worker"
+            ],
+            "description": "Pseudo extentions that will be ignored when resolving the filename of the active file on activation. Add to this array if you have a custom dot-separated pseudo extention "
           }
         }
       },

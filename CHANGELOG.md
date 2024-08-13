@@ -6,4 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Initial release
+- Auto mode for automatic resolution of the imports statement location
+- Support for traversing the file system upwards to find the imports file in case of subcomponents
+
+## [Added]
+
+- v1.0.0 - Initial release, supports adding to the imports statement on modules and standalone components

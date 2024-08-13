@@ -1,15 +1,21 @@
-import { format } from "path";
-import path from "path";
 import * as vscode from "vscode";
 
 // Access the neecessary configuration
-const config = vscode.workspace.getConfiguration("angular-import");
-const importStatementType = config.get<string>("importStatementType")!;
-const componentFormats = config.get<string[]>("componentFormats")!;
-const moduleFormats = config.get<string[]>("moduleFormats")!;
-let openSideBySide = config.get<boolean>("openFileSideBySide")!;
+let importStatementType = "";
+let componentFormats: string[];
+let moduleFormats: string[];
+let ignorableExtentions: string[];
+let openSideBySide: boolean;
+
+// Listens to configuration changes to update the configuration
+const configurationListener = vscode.workspace.onDidChangeConfiguration(
+  handleConfigurationChange
+);
 
 export function activate(context: vscode.ExtensionContext) {
+  // Initializes the configuration variables
+  getConfigurations();
+
   // Register the single command that we have
   const importCommand = vscode.commands.registerCommand(
     "angular-import.goToImportStatement",
@@ -17,23 +23,58 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+// Updates the configuration variables when the configuration for the extention changes
+function handleConfigurationChange(
+  event: vscode.ConfigurationChangeEvent
+): void {
+  if (event.affectsConfiguration("angular-import")) {
+    getConfigurations();
+  }
+}
 
+// Fetches a snapshot of the configurations
+function getConfigurations() {
+  const config = vscode.workspace.getConfiguration("angular-import");
+  importStatementType = config.get<string>("importStatementType")!;
+  componentFormats = config.get<string[]>("componentFormats")!;
+  moduleFormats = config.get<string[]>("moduleFormats")!;
+  ignorableExtentions = config.get<string[]>("fileTypeExtentions")!;
+  openSideBySide = config.get<boolean>("openFileSideBySide")!;
+}
+
+// Remember to dispose of any open listeners
+export function deactivate() {
+  configurationListener.dispose();
+}
+
+/** Finds the file that is supposed to have the imports statement, reads the configs to figure out if the project uses modules or standalone componets */
 async function goToFileWithImportStatement() {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
     return;
   }
+  // Gets the full filename of the active editor
+  let currentFilePath = editor.document.uri.path;
   let currentFile = editor.document.fileName;
   let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
 
   switch (importStatementType) {
     case "module":
-      // traverse upwards looking for a module file and open it into the active editor.
-      openCorrespondingFile(fileNameWithoutExtension, ...moduleFormats);
+      if (!fileIsModule(currentFilePath)) {
+        await openCorrespondingFile(fileNameWithoutExtension, ...moduleFormats);
+      }
+      //TODO - traverse upwards looking for a module file and open it into the active editor.
+      await goToImportStatement();
       break;
     case "component":
-      // traverse upwards looking for a component file and open it into the active editor.
+      if (!fileIsComponent(currentFilePath)) {
+        await openCorrespondingFile(
+          fileNameWithoutExtension,
+          ...componentFormats
+        );
+      }
+      //TODO - traverse upwards looking for a component file and open it into the active editor.
+      await goToImportStatement();
       break;
     default:
       break;
@@ -100,26 +141,36 @@ function calcOffsetFromMatchToLastSquareBracket(
   // the last square bracket has to be in the last line of the match
   const lastLine = lineSplitMatch[lineSplitMatch.length - 1];
   // just get the offset of the last square bracket
-  const offsetChars = lastLine.indexOf("]") - 2;
+  let offsetChars = lastLine.indexOf("]");
+  // For some reason if the last line is empty offset starts counting the newline and indentation
+  if (offsetLines > 0) {
+    offsetChars -= 2;
+  }
   return [offsetLines, offsetChars];
 }
 
 /** Shoutout angular2-switcher for the following functions*/
 export function getFileNameWithoutExtension(path: string) {
-  // Remove the file extension
-  let parts = path.split(".");
-  parts.pop();
-  if (parts.length > 1) {
-    if (parts[parts.length - 1] === "spec") {
-      parts.pop();
-    }
-    if (parts[parts.length - 1] === "ng") {
-      parts.pop();
+  // get the path segments ( operates on normalized paths, no specific OS separators)
+  let segments = path.split("/");
+  // get the name of the file, with the extention
+  let fileName = segments.pop();
+  let fileNameParts = fileName?.split(".");
+  // removes the file extention. and pseudoextentions, like .spec.ts.
+  // It's better to do it this way to keep the extention working even on files with dots in the middle of the name
+  if (fileNameParts) {
+    fileNameParts?.pop();
+    while (
+      fileNameParts &&
+      ignorableExtentions.includes(fileNameParts[fileNameParts?.length - 1])
+    ) {
+      fileNameParts?.pop();
     }
   }
-  return parts.join(".");
+  return segments.join("/") + "/" + fileNameParts?.join(".");
 }
 
+// Open a file that matches the given name and one of the given formats
 async function openCorrespondingFile(
   fileNameWithoutExtension: string,
   ...formats: string[]
@@ -130,7 +181,7 @@ async function openCorrespondingFile(
   }
 
   for (let index = 0; index < formats.length; index++) {
-    const fileName = `${fileNameWithoutExtension}${formats[index]}`;
+    const fileName = `${fileNameWithoutExtension}.${formats[index]}`;
     const textEditor = vscode.window.visibleTextEditors.find(
       (textDocument) => textDocument.document.fileName === fileName
     );
@@ -180,6 +231,8 @@ async function openFile(fileName: string): Promise<boolean> {
   }
 }
 
+// TODO - this might be usefull
+/**
 async function getFilesInDirectoryOfActiveEditor() {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -200,3 +253,4 @@ async function getFilesInDirectoryOfActiveEditor() {
     vscode.Uri.parse(currentFilesDirectory)
   );
 }
+*/
