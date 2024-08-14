@@ -5,6 +5,9 @@
   "displayName": "Angular Import",
   "description": "Import into your module or standalone component with one command!",
   "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/lucasnbsb/AngularImport"
+  },
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.0.0"
