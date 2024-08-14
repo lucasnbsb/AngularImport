@@ -61,10 +61,10 @@ export function deactivate() {
 async function goToFileWithImportStatement() {
   switch (importStatementType) {
     case "module":
-      await goToComponentImportStatement();
+      await goToModuleImportStatement();
       break;
     case "component":
-      await goToModuleImportStatement();
+      await goToComponentImportStatement();
       break;
     default:
       break;
