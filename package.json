@@ -1,13 +1,23 @@
 {
   "name": "angular-import",
-  "displayName": "AngularImport",
+  "publisher": "lucasnbsb",
+  "pricing": "Free",
+  "displayName": "Angular Import",
   "description": "Import into your module or standalone component with one command!",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.0.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Keymaps"
+  ],
+  "keywords": [
+    "Angular",
+    "Shortcut",
+    "Import",
+    "Imports",
+    "Frog"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -16,6 +26,20 @@
       {
         "command": "angular-import.goToImportStatement",
         "title": "Angular: Go to import statement"
+      },
+      {
+        "command": "angular-import.goToComponentImportStatement",
+        "title": "Angular: Go to import statement in the corresponding component"
+      },
+      {
+        "command": "angular-import.goToModuleImportStatement",
+        "title": "Angular: Go to import statement in the corresponding module"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "angular-import.goToImportStatement",
+        "key": "shift+alt+y"
       }
     ],
     "configuration": [

@@ -21,6 +21,16 @@ export function activate(context: vscode.ExtensionContext) {
     "angular-import.goToImportStatement",
     goToFileWithImportStatement
   );
+
+  const componentImportCommand = vscode.commands.registerCommand(
+    "angular-import.goToComponentImportStatement",
+    goToComponentImportStatement
+  );
+
+  const moduleImportCommand = vscode.commands.registerCommand(
+    "angular-import.goToModuleImportStatement",
+    goToModuleImportStatement
+  );
 }
 
 // Updates the configuration variables when the configuration for the extention changes
@@ -49,6 +59,19 @@ export function deactivate() {
 
 /** Finds the file that is supposed to have the imports statement, reads the configs to figure out if the project uses modules or standalone componets */
 async function goToFileWithImportStatement() {
+  switch (importStatementType) {
+    case "module":
+      await goToComponentImportStatement();
+      break;
+    case "component":
+      await goToModuleImportStatement();
+      break;
+    default:
+      break;
+  }
+}
+
+async function goToComponentImportStatement() {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
     return;
@@ -58,27 +81,26 @@ async function goToFileWithImportStatement() {
   let currentFile = editor.document.fileName;
   let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
 
-  switch (importStatementType) {
-    case "module":
-      if (!fileIsModule(currentFilePath)) {
-        await openCorrespondingFile(fileNameWithoutExtension, ...moduleFormats);
-      }
-      //TODO - traverse upwards looking for a module file and open it into the active editor.
-      await goToImportStatement();
-      break;
-    case "component":
-      if (!fileIsComponent(currentFilePath)) {
-        await openCorrespondingFile(
-          fileNameWithoutExtension,
-          ...componentFormats
-        );
-      }
-      //TODO - traverse upwards looking for a component file and open it into the active editor.
-      await goToImportStatement();
-      break;
-    default:
-      break;
+  if (!fileIsComponent(currentFilePath)) {
+    await openCorrespondingFile(fileNameWithoutExtension, ...componentFormats);
   }
+  await goToImportStatement();
+}
+
+async function goToModuleImportStatement() {
+  let editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+  // Gets the full filename of the active editor
+  let currentFilePath = editor.document.uri.path;
+  let currentFile = editor.document.fileName;
+  let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
+
+  if (!fileIsModule(currentFilePath)) {
+    await openCorrespondingFile(fileNameWithoutExtension, ...moduleFormats);
+  }
+  await goToImportStatement();
 }
 
 /**
