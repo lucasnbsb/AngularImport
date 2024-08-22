@@ -1,14 +1,12 @@
 # Change Log
 
-All notable changes to the "angular-import" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
 ## [Unreleased]
 
-- Auto mode for automatic resolution of the imports statement location
+- Jump to the end of the constructor on the component file
 - Support for traversing the file system upwards to find the imports file in case of subcomponents
 
 ## [Added]
 
 - v1.0.0 - Initial release, supports adding to the imports statement on modules and standalone components
+- v1.1.0 - Fixes a bug, improves documentation
+- v1.2.0 - Adds the auto mode, which looks for modules first and then standalone components, auto mode is now the default

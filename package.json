@@ -23,13 +23,17 @@
     "Imports",
     "Frog"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:angular-import.goToImportStatement",
+    "onCommand:angular-import.goToComponentImportStatement",
+    "onCommand:angular-import.goToModuleImportStatement"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "angular-import.goToImportStatement",
-        "title": "Angular: Go to import statement"
+        "title": "Angular: Go to import statement dictated by the configuration"
       },
       {
         "command": "angular-import.goToComponentImportStatement",
@@ -52,7 +56,7 @@
         "properties": {
           "angular-import.importStatementType": {
             "type": "string",
-            "default": "module",
+            "default": "auto",
             "enum": [
               "module",
               "component",

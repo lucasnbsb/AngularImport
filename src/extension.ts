@@ -66,28 +66,25 @@ async function goToFileWithImportStatement() {
     case "component":
       await goToComponentImportStatement();
       break;
+    case "auto":
+      await goToModuleFirstThenComponent();
+      break;
     default:
       break;
   }
 }
 
-async function goToComponentImportStatement() {
-  let editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    return;
+async function goToModuleFirstThenComponent() {
+  const moduleExists = await tryToOpenRelatedFileByExtention(moduleFormats);
+  if (moduleExists) {
+    goToImportStatement();
+  } else {
+    await goToComponentImportStatement();
   }
-  // Gets the full filename of the active editor
-  let currentFilePath = editor.document.uri.path;
-  let currentFile = editor.document.fileName;
-  let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
-
-  if (!fileIsComponent(currentFilePath)) {
-    await openCorrespondingFile(fileNameWithoutExtension, ...componentFormats);
-  }
-  await goToImportStatement();
 }
 
-async function goToModuleImportStatement() {
+// Returns true if the active editor ended up in a file with a matching extention
+async function tryToOpenRelatedFileByExtention(extentions: string[]) {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
     return;
@@ -98,9 +95,23 @@ async function goToModuleImportStatement() {
   let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
 
   if (!fileIsModule(currentFilePath)) {
-    await openCorrespondingFile(fileNameWithoutExtension, ...moduleFormats);
+    return await openCorrespondingFile(fileNameWithoutExtension, ...extentions);
   }
-  await goToImportStatement();
+  return true;
+}
+
+async function goToComponentImportStatement() {
+  const editorInPlace = await tryToOpenRelatedFileByExtention(componentFormats);
+  if (editorInPlace) {
+    await goToImportStatement();
+  }
+}
+
+async function goToModuleImportStatement() {
+  const editorInPlace = await tryToOpenRelatedFileByExtention(moduleFormats);
+  if (editorInPlace) {
+    await goToImportStatement();
+  }
 }
 
 /**
@@ -137,7 +148,8 @@ async function goToImportStatement() {
       // there is an import statement and imports
       const position = editor.document.positionAt(matchArray.index);
       const [offsetLines, offsetChars] = calcOffsetFromMatchToLastSquareBracket(
-        matchArray[0]
+        matchArray[0],
+        position
       );
       const finalPosition = position.translate(offsetLines, offsetChars);
       editor.selection = new vscode.Selection(finalPosition, finalPosition);
@@ -154,7 +166,8 @@ async function goToImportStatement() {
  * @returns The offset in lines and characters
  */
 function calcOffsetFromMatchToLastSquareBracket(
-  fullMatch: string
+  fullMatch: string,
+  position: vscode.Position
 ): [number, number] {
   // find how many lines we need to jump by splitting on newlines.
   // This is slower than other ways of counting but we actually use the array
@@ -166,8 +179,9 @@ function calcOffsetFromMatchToLastSquareBracket(
   let offsetChars = lastLine.indexOf("]");
   // For some reason if the last line is empty offset starts counting the newline and indentation
   if (offsetLines > 0) {
-    offsetChars -= 2;
+    offsetChars = offsetChars - position.character;
   }
+
   return [offsetLines, offsetChars];
 }
 
@@ -193,6 +207,7 @@ export function getFileNameWithoutExtension(path: string) {
 }
 
 // Open a file that matches the given name and one of the given formats
+// Returns true if a file was opened, false otherwise
 async function openCorrespondingFile(
   fileNameWithoutExtension: string,
   ...formats: string[]
@@ -204,14 +219,12 @@ async function openCorrespondingFile(
 
   for (let index = 0; index < formats.length; index++) {
     const fileName = `${fileNameWithoutExtension}.${formats[index]}`;
-    const textEditor = vscode.window.visibleTextEditors.find(
-      (textDocument) => textDocument.document.fileName === fileName
-    );
     var succ = await openFile(fileName);
     if (succ) {
-      break;
+      return true;
     }
   }
+  return false;
 }
 
 function fileIsComponent(filePath: string): boolean {
