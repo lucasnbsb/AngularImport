@@ -26,7 +26,8 @@
   "activationEvents": [
     "onCommand:angular-import.goToImportStatement",
     "onCommand:angular-import.goToComponentImportStatement",
-    "onCommand:angular-import.goToModuleImportStatement"
+    "onCommand:angular-import.goToModuleImportStatement",
+    "onCommand:angular-import.goToConstructor"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -42,12 +43,20 @@
       {
         "command": "angular-import.goToModuleImportStatement",
         "title": "Angular: Go to import statement in the corresponding module"
+      },
+      {
+        "command": "angular-import.goToConstructor",
+        "title": "Angular: Go to the constructor in the corresponding component"
       }
     ],
     "keybindings": [
       {
         "command": "angular-import.goToImportStatement",
         "key": "shift+alt+y"
+      },
+      {
+        "command": "angular-import.goToConstructor",
+        "key": "shift+alt+t"
       }
     ],
     "configuration": [

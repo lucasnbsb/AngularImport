@@ -4,9 +4,9 @@
 
 Jump to the imports statement to add a new import in one input!
 
-Press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> on Windows and Linux or <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>Y</kbd> on MacOs
+Press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> on Windows and Linux or <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>Y</kbd> on MacOs and land on the end of the imports statement
 
-and land on the end of the imports statement
+You can also add to the constructor of the corresponding component by pressing <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd>
 
 ## Requirements
 
@@ -29,3 +29,7 @@ Initial release, supports adding to the imports statement on modules and standal
 ### 1.2.0
 
 Adds auto mode, which looks for modules first and then standalone components, auto mode is now the default
+
+### 1.3.0
+
+Adds go to constructor, navigates to the corresponding component and sets the cursor at the end of the constructor's parameters
