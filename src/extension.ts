@@ -1,20 +1,18 @@
 import * as vscode from "vscode";
+import { ImportStatement } from "./types";
+import { CONSTRUCTOR_REGEX, IMPORT_STATEMENT_REGEX } from "./constants";
 
 // Access the neecessary configuration
-let importStatementType = "";
+let importStatementType: ImportStatement = "auto";
 let componentFormats: string[];
 let moduleFormats: string[];
 let ignorableExtentions: string[];
 let openSideBySide: boolean;
 
-// Listens to configuration changes to update the configuration
-const configurationListener = vscode.workspace.onDidChangeConfiguration(
-  handleConfigurationChange
-);
-
+/**Lifecycle methods */
 export function activate(context: vscode.ExtensionContext) {
-  // Initializes the configuration variables
-  getConfigurations();
+  // Initializes the configuration variables, from this point onward the listener will keep them updated
+  updateConfigurations();
 
   // Register the single command that we have
   const importCommand = vscode.commands.registerCommand(
@@ -31,32 +29,48 @@ export function activate(context: vscode.ExtensionContext) {
     "angular-import.goToModuleImportStatement",
     goToModuleImportStatement
   );
+
+  const componentConstructorCommand = vscode.commands.registerCommand(
+    "angular-import.goToConstructor",
+    goToComponentConstructor
+  );
+
+  context.subscriptions.push(importCommand);
+  context.subscriptions.push(componentImportCommand);
+  context.subscriptions.push(moduleImportCommand);
+  context.subscriptions.push(componentConstructorCommand);
 }
+
+export function deactivate() {
+  configurationListener.dispose();
+}
+
+/** CONFIGURATION RELATED METHODS */
+// Listens to configuration changes to update the configuration
+const configurationListener = vscode.workspace.onDidChangeConfiguration(
+  handleConfigurationChange
+);
 
 // Updates the configuration variables when the configuration for the extention changes
 function handleConfigurationChange(
   event: vscode.ConfigurationChangeEvent
 ): void {
   if (event.affectsConfiguration("angular-import")) {
-    getConfigurations();
+    updateConfigurations();
   }
 }
 
 // Fetches a snapshot of the configurations
-function getConfigurations() {
+function updateConfigurations() {
   const config = vscode.workspace.getConfiguration("angular-import");
-  importStatementType = config.get<string>("importStatementType")!;
+  importStatementType = config.get<ImportStatement>("importStatementType")!;
   componentFormats = config.get<string[]>("componentFormats")!;
   moduleFormats = config.get<string[]>("moduleFormats")!;
   ignorableExtentions = config.get<string[]>("fileTypeExtentions")!;
   openSideBySide = config.get<boolean>("openFileSideBySide")!;
 }
 
-// Remember to dispose of any open listeners
-export function deactivate() {
-  configurationListener.dispose();
-}
-
+/** JUMP TO IMPORT STATEMENT METHODS */
 /** Finds the file that is supposed to have the imports statement, reads the configs to figure out if the project uses modules or standalone componets */
 async function goToFileWithImportStatement() {
   switch (importStatementType) {
@@ -74,43 +88,47 @@ async function goToFileWithImportStatement() {
   }
 }
 
-async function goToModuleFirstThenComponent() {
-  const moduleExists = await tryToOpenRelatedFileByExtention(moduleFormats);
-  if (moduleExists) {
-    goToImportStatement();
-  } else {
-    await goToComponentImportStatement();
+async function goToModuleImportStatement() {
+  const editorInPlace = await tryToOpenRelatedFileByExtention(
+    moduleFormats,
+    fileIsModule
+  );
+  if (editorInPlace) {
+    await goToCharacterInMatch(
+      IMPORT_STATEMENT_REGEX,
+      "]",
+      "No module import statement found"
+    );
   }
-}
-
-// Returns true if the active editor ended up in a file with a matching extention
-async function tryToOpenRelatedFileByExtention(extentions: string[]) {
-  let editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    return;
-  }
-  // Gets the full filename of the active editor
-  let currentFilePath = editor.document.uri.path;
-  let currentFile = editor.document.fileName;
-  let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
-
-  if (!fileIsModule(currentFilePath)) {
-    return await openCorrespondingFile(fileNameWithoutExtension, ...extentions);
-  }
-  return true;
 }
 
 async function goToComponentImportStatement() {
-  const editorInPlace = await tryToOpenRelatedFileByExtention(componentFormats);
+  const editorInPlace = await tryToOpenRelatedFileByExtention(
+    componentFormats,
+    fileIsComponent
+  );
   if (editorInPlace) {
-    await goToImportStatement();
+    await goToCharacterInMatch(
+      IMPORT_STATEMENT_REGEX,
+      "]",
+      "No module import statement found"
+    );
   }
 }
 
-async function goToModuleImportStatement() {
-  const editorInPlace = await tryToOpenRelatedFileByExtention(moduleFormats);
-  if (editorInPlace) {
-    await goToImportStatement();
+async function goToModuleFirstThenComponent() {
+  const moduleExists = await tryToOpenRelatedFileByExtention(
+    moduleFormats,
+    fileIsModule
+  );
+  if (moduleExists) {
+    await goToCharacterInMatch(
+      IMPORT_STATEMENT_REGEX,
+      "]",
+      "No module import statement found"
+    );
+  } else {
+    await goToComponentImportStatement();
   }
 }
 
@@ -118,7 +136,11 @@ async function goToModuleImportStatement() {
  * Relocates the cursor to the end of the last square bracket of
  * the imports array in the active file.
  */
-async function goToImportStatement() {
+async function goToCharacterInMatch(
+  regexToMatch: RegExp,
+  charactrerToFind: string,
+  notFoundMessage: string
+) {
   // Get the active text editor
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -130,8 +152,7 @@ async function goToImportStatement() {
   const currentFileCode = editor.document.getText();
 
   /** Matches the full multinile import statement capturing the content and the last square bracket */
-  const importStetementRegex = /imports\s*:\s*\[([^\]]*)(\])/gm;
-  const matchArray = importStetementRegex.exec(currentFileCode);
+  const matchArray = regexToMatch.exec(currentFileCode);
 
   // 0 for the full text, 1 for the imports content, 2 for the last square bracket
   const EXPECTED_MATCH_ARRAY_LENGTH = 3;
@@ -147,46 +168,58 @@ async function goToImportStatement() {
     } else {
       // there is an import statement and imports
       const position = editor.document.positionAt(matchArray.index);
-      const [offsetLines, offsetChars] = calcOffsetFromMatchToLastSquareBracket(
+      const [offsetLines, offsetChars] = calcOffsetFromMatchToCharacter(
         matchArray[0],
-        position
+        position,
+        charactrerToFind
       );
       const finalPosition = position.translate(offsetLines, offsetChars);
       editor.selection = new vscode.Selection(finalPosition, finalPosition);
       editor.revealRange(new vscode.Range(finalPosition, finalPosition));
     }
   } else {
-    vscode.window.showInformationMessage("No import statement found");
+    vscode.window.showInformationMessage(notFoundMessage);
   }
 }
 
-/**
- * Calculates the offset from the match to the last square bracket
- * @param fullMatch The full match of the import statement
- * @returns The offset in lines and characters
- */
-function calcOffsetFromMatchToLastSquareBracket(
-  fullMatch: string,
-  position: vscode.Position
-): [number, number] {
-  // find how many lines we need to jump by splitting on newlines.
-  // This is slower than other ways of counting but we actually use the array
-  const lineSplitMatch = fullMatch.split("\n");
-  const offsetLines = lineSplitMatch.length - 1;
-  // the last square bracket has to be in the last line of the match
-  const lastLine = lineSplitMatch[lineSplitMatch.length - 1];
-  // just get the offset of the last square bracket
-  let offsetChars = lastLine.indexOf("]");
-  // For some reason if the last line is empty offset starts counting the newline and indentation
-  if (offsetLines > 0) {
-    offsetChars = offsetChars - position.character;
+/** JUMP TO CONSTRUCTOR METHODS*/
+async function goToComponentConstructor() {
+  const editorInPlace = await tryToOpenRelatedFileByExtention(
+    componentFormats,
+    fileIsComponent
+  );
+  if (editorInPlace) {
+    await goToCharacterInMatch(
+      CONSTRUCTOR_REGEX,
+      ")",
+      "No constructor method found"
+    );
   }
+}
 
-  return [offsetLines, offsetChars];
+/** UTILITIES */
+// Returns true if the active editor ended up in a file with a matching extention
+async function tryToOpenRelatedFileByExtention(
+  extentions: string[],
+  currentEditorTester: (path: string) => boolean
+) {
+  let editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+  // Gets the full filename of the active editor
+  let currentFilePath = editor.document.uri.path;
+  let currentFile = editor.document.fileName;
+  let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
+
+  if (!currentEditorTester(currentFilePath)) {
+    return await openCorrespondingFile(fileNameWithoutExtension, ...extentions);
+  }
+  return true;
 }
 
 /** Shoutout angular2-switcher for the following functions*/
-export function getFileNameWithoutExtension(path: string) {
+function getFileNameWithoutExtension(path: string) {
   // get the path segments ( operates on normalized paths, no specific OS separators)
   let segments = path.split("/");
   // get the name of the file, with the extention
@@ -266,26 +299,28 @@ async function openFile(fileName: string): Promise<boolean> {
   }
 }
 
-// TODO - this might be usefull
 /**
-async function getFilesInDirectoryOfActiveEditor() {
-  let editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    return;
+ * Calculates the offset from the match to the last square bracket
+ * @param fullMatch The full match of the import statement
+ * @returns The offset in lines and characters
+ */
+function calcOffsetFromMatchToCharacter(
+  fullMatch: string,
+  position: vscode.Position,
+  character: string
+): [number, number] {
+  // find how many lines we need to jump by splitting on newlines.
+  // This is slower than other ways of counting but we actually use the array
+  const lineSplitMatch = fullMatch.split("\n");
+  const offsetLines = lineSplitMatch.length - 1;
+  // the last square bracket has to be in the last line of the match
+  const lastLine = lineSplitMatch[lineSplitMatch.length - 1];
+  // just get the offset of the last square bracket
+  let offsetChars = lastLine.indexOf(character);
+  // For some reason if the last line is empty offset starts counting the newline and indentation
+  if (offsetLines > 0) {
+    offsetChars = offsetChars - position.character;
   }
-  let currentFile = editor.document.fileName;
-  let fileNameWithoutExtension = getFileNameWithoutExtension(currentFile);
 
-  //   get all files in the current directory
-  const uri = vscode.Uri.file(currentFile);
-  if (!uri) {
-    return;
-  }
-
-  const currentFilesDirectory = path.dirname(uri.path);
-
-  const filesInDirectory = await vscode.workspace.fs.readDirectory(
-    vscode.Uri.parse(currentFilesDirectory)
-  );
+  return [offsetLines, offsetChars];
 }
-*/
