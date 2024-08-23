@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { ImportStatement } from "./types";
 import { CONSTRUCTOR_REGEX, IMPORT_STATEMENT_REGEX } from "./constants";
+import { ImportStatement } from "./types";
 
 // Access the neecessary configuration
 let importStatementType: ImportStatement = "auto";
@@ -94,7 +94,7 @@ async function goToModuleImportStatement() {
     fileIsModule
   );
   if (editorInPlace) {
-    await goToCharacterInMatch(
+    await goToLastCharacterInMatch(
       IMPORT_STATEMENT_REGEX,
       "]",
       "No module import statement found"
@@ -108,7 +108,7 @@ async function goToComponentImportStatement() {
     fileIsComponent
   );
   if (editorInPlace) {
-    await goToCharacterInMatch(
+    await goToLastCharacterInMatch(
       IMPORT_STATEMENT_REGEX,
       "]",
       "No module import statement found"
@@ -122,7 +122,7 @@ async function goToModuleFirstThenComponent() {
     fileIsModule
   );
   if (moduleExists) {
-    await goToCharacterInMatch(
+    await goToLastCharacterInMatch(
       IMPORT_STATEMENT_REGEX,
       "]",
       "No module import statement found"
@@ -136,7 +136,7 @@ async function goToModuleFirstThenComponent() {
  * Relocates the cursor to the end of the last square bracket of
  * the imports array in the active file.
  */
-async function goToCharacterInMatch(
+async function goToLastCharacterInMatch(
   regexToMatch: RegExp,
   charactrerToFind: string,
   notFoundMessage: string
@@ -168,7 +168,7 @@ async function goToCharacterInMatch(
     } else {
       // there is an import statement and imports
       const position = editor.document.positionAt(matchArray.index);
-      const [offsetLines, offsetChars] = calcOffsetFromMatchToCharacter(
+      const [offsetLines, offsetChars] = calcOffsetFromMatchToLastOfCharacter(
         matchArray[0],
         position,
         charactrerToFind
@@ -189,7 +189,7 @@ async function goToComponentConstructor() {
     fileIsComponent
   );
   if (editorInPlace) {
-    await goToCharacterInMatch(
+    await goToLastCharacterInMatch(
       CONSTRUCTOR_REGEX,
       ")",
       "No constructor method found"
@@ -304,7 +304,7 @@ async function openFile(fileName: string): Promise<boolean> {
  * @param fullMatch The full match of the import statement
  * @returns The offset in lines and characters
  */
-function calcOffsetFromMatchToCharacter(
+function calcOffsetFromMatchToLastOfCharacter(
   fullMatch: string,
   position: vscode.Position,
   character: string
