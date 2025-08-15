@@ -2,9 +2,9 @@
 
 ## Features
 
-Jump to the imports statement to add a new import in one input!
+Jump to the imports statement in one input!
 
-Press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> on Windows and Linux or <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>Y</kbd> on MacOs and land on the end of the imports statement
+Press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> on Windows and Linux or <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>Y</kbd> on MacOs and land on the end of the imports statement of the closest module or standalone component file.
 
 You can also add to the constructor of the corresponding component by pressing <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd>
 
@@ -33,3 +33,7 @@ Adds auto mode, which looks for modules first and then standalone components, au
 ### 1.3.0
 
 Adds go to constructor, navigates to the corresponding component and sets the cursor at the end of the constructor's parameters
+
+### 1.4.0
+
+New way to look for modules or standalone components, moving upwards from the current file until a module or component is found, or a stop directory is reached
